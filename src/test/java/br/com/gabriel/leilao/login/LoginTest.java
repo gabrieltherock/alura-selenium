@@ -1,54 +1,56 @@
 package br.com.gabriel.leilao.login;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import br.com.gabriel.leilao.lance.LancesPage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
-import org.openqa.selenium.NoSuchElementException;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LoginTest {
 
-    private static WebDriver browser;
+    private LoginPage paginaDeLogin;
 
-    @BeforeAll
-    static void inicializaDriver() {
-        System.setProperty("webdriver.chrome.driver", "drivers/chromedriver.exe");
-        browser = new ChromeDriver();
+    @BeforeEach
+    public void beforeEach() {
+        this.paginaDeLogin = new LoginPage();
     }
 
-    @AfterAll
-    static void fechaBrowser() {
-        browser.quit();
+    @AfterEach
+    public void afterEach() {
+        this.paginaDeLogin.fechar();
     }
 
     @Test
     void deveriaEfetuarLoginComDadosValidos() {
-        realizaLogin("fulano", "pass");
+        paginaDeLogin.preencherFormularioDeLogin("fulano", "pass");
+        paginaDeLogin.efetuarLogin();
 
-        assertNotEquals("http://localhost:8080/login", browser.getCurrentUrl());
-        assertEquals("fulano", browser.findElement(By.id("usuario-logado")).getText());
+        String nomeUsuarioLogado = paginaDeLogin.getNomeUsuarioLogado();
+        assertEquals("fulano", nomeUsuarioLogado);
+        assertFalse(paginaDeLogin.isPaginaAtual());
     }
 
     @Test
-    void loginInvalido() {
-        realizaLogin("errado", "errado");
+    void naoDeveriaEfetuarLoginComDadosInvalidos() {
+        paginaDeLogin.preencherFormularioDeLogin("invalido", "1233");
+        paginaDeLogin.efetuarLogin();
 
-        assertEquals("http://localhost:8080/login?error", browser.getCurrentUrl());
-        assertTrue(browser.getPageSource().contains("Usuário e senha inválidos."));
-        assertThrows(NoSuchElementException.class, () -> browser.findElement(By.id("usuario-logado")));
+        assertNull(paginaDeLogin.getNomeUsuarioLogado());
+        assertTrue(paginaDeLogin.isPaginaAtual());
+        assertTrue(paginaDeLogin.isMensagemDeLoginInvalidoVisivel());
     }
 
-    private void realizaLogin(String usuario, String senha) {
-        browser.navigate().to("http://localhost:8080/login");
-        browser.findElement(By.id("username")).sendKeys(usuario);
-        browser.findElement(By.id("password")).sendKeys(senha);
-        browser.findElement(By.id("login-form")).submit();
+    @Test
+    void naoDeveriaAcessarUrlRestritaSemEstarLogado() {
+        LancesPage paginaDeLances = new LancesPage();
+
+        assertFalse(paginaDeLances.isPaginaAtual());
+        assertFalse(paginaDeLances.isTituloLeilaoVisivel());
+
+        paginaDeLances.fechar();
     }
 }
